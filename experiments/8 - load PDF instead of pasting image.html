@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF with Auto Lines</title>
+    <style>
+        #canvas-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="application/pdf">
+   
+    <div id="canvas-container">
+        <canvas id="imageCanvas" width="600" height="400"></canvas>
+        <canvas id="linesCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.min.js"></script>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const imageCanvas = document.getElementById('imageCanvas');
+        const linesCanvas = document.getElementById('linesCanvas');
+        const imageCtx = imageCanvas.getContext('2d');
+        const linesCtx = linesCanvas.getContext('2d');
+
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const pdfData = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                const page = await pdf.getPage(1); // Load the first page
+
+                const viewport = page.getViewport({ scale: 1 });
+                imageCanvas.width = viewport.width;
+                imageCanvas.height = viewport.height;
+                linesCanvas.width = viewport.width;
+                linesCanvas.height = viewport.height;
+
+                const renderContext = {
+                    canvasContext: imageCtx,
+                    viewport: viewport
+                };
+
+                await page.render(renderContext).promise;
+
+                // Draw lines after rendering
+                drawLines();
+                // logLines();
+                fileInput.style.display = 'none';
+            }
+        });
+
+        // Draw lines function
+        function drawLines() {
+            const lineLocations = findLineLocations();
+            console.log(lineLocations);
+
+            linesCtx.clearRect(0, 0, linesCanvas.width, linesCanvas.height);
+            linesCtx.strokeStyle = 'black';
+            linesCtx.lineWidth = 1;
+
+            lineLocations.forEach(y => {
+                drawOneLine(0, linesCanvas.width, y, y, linesCtx);
+            });
+        }
+
+       // Detect the y-coordinate locations of the grid lines in the document
+       function findLineLocations() {
+            const imageData = imageCtx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+            const { data, width, height } = imageData;
+            const linesYCoordinates = [];
+            const targetColour = 230;
+            const tolerance = 20;
+
+            let x = 20;        // TODO Must fix this to scan whole image not just one column
+            drawOneLine(x,x,0,height,imageCtx);
+
+            for (let y = 0; y < height; y++) {
+                const index = (y * width + x) * 4; // Calculate pixel index
+                const r = data[index];     // Red channel
+                const g = data[index + 1]; // Green channel
+                const b = data[index + 2]; // Blue channel
+
+                // Check if the pixel is near target colour
+                if (r >= targetColour - tolerance && r <= targetColour + tolerance) {
+                    if (g >= targetColour - tolerance && g <= targetColour + tolerance) {
+                        if (b >= targetColour - tolerance && b <= targetColour + tolerance) {
+                            console.log("HIT COLOUR!");
+                            linesYCoordinates.push(y); // Add Y-coordinate of the black line
+                        }
+                    }
+                }
+            }
+
+            return linesYCoordinates;
+        }
+
+        // Draw the line
+        function drawOneLine(startX, endX, startY, endY, linesCtx) {
+            linesCtx.beginPath();
+            linesCtx.moveTo(startX, startY + 0.5);
+            linesCtx.lineTo(endX, endY + 0.5);
+            linesCtx.stroke();
+        }
+
+        // For testing mainly - just logs the y-cordinates of the lines
+        function logLines() {
+            const lineLocations = findLineLocations();
+            console.log("LINE LOCATIONS: " + lineLocations);
+        }
+    </script>
+</body>
+</html>

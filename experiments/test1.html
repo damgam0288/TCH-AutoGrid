@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paste Image and Draw Lines</title>
+    <style>
+        #container {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+        #image-area {
+            position: relative;
+        }
+        #lines {
+            position: absolute;
+            top: 0;
+            left: 100%;
+            width: 200px;
+            height: 100%;
+        }
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <button id="paste-btn">Paste Image</button>
+        <div id="image-area">
+            <canvas id="canvas"></canvas>
+            <div id="lines"></div>
+        </div>
+    </div>
+
+    <script>
+        const pasteBtn = document.getElementById('paste-btn');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const linesDiv = document.getElementById('lines');
+
+        pasteBtn.addEventListener('click', () => {
+            navigator.clipboard.read().then(items => {
+                for (let item of items) {
+                    if (item.types.includes('image/png')) {
+                        item.getType('image/png').then(blob => {
+                            const img = new Image();
+                            img.src = URL.createObjectURL(blob);
+                            img.onload = () => {
+                                // Set canvas dimensions and draw image
+                                const maxWidth = 300;
+                                const scale = Math.min(maxWidth / img.width, 1);
+                                canvas.width = img.width * scale;
+                                canvas.height = img.height * scale;
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                                // Draw horizontal lines on the right side
+                                linesDiv.innerHTML = ''; // Clear previous lines
+                                const lineSpacing = canvas.height / 10;
+                                for (let i = 0; i < 10; i++) {
+                                    const line = document.createElement('div');
+                                    line.style.position = 'absolute';
+                                    line.style.top = `${i * lineSpacing}px`;
+                                    line.style.left = '0';
+                                    line.style.width = '100%';
+                                    line.style.borderTop = '1px solid black';
+                                    linesDiv.appendChild(line);
+                                }
+
+                                // Remove button
+                                pasteBtn.remove();
+                            };
+                        });
+                        break;
+                    }
+                }
+            }).catch(err => {
+                alert('Error reading clipboard: ' + err);
+            });
+        });
+    </script>
+</body>
+</html>

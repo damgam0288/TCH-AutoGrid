@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detect Black Lines</title>
+    <style>
+        #canvas-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <button id="pasteButton">Paste Image</button>
+    
+    <div id="canvas-container">
+        <canvas id="imageCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <script>
+        const pasteButton = document.getElementById('pasteButton');
+        const imageCanvas = document.getElementById('imageCanvas');
+        const imageCtx = imageCanvas.getContext('2d');
+
+        pasteButton.addEventListener('click', async () => {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            const img = new Image();
+                            img.onload = () => {
+                                // Adjust canvas size to match the image
+                                imageCanvas.width = img.width;
+                                imageCanvas.height = img.height;
+
+                                // Draw the image
+                                imageCtx.drawImage(img, 0, 0);
+
+                                // Detect black lines
+                                detectBlackLines();
+                                pasteButton.remove();
+                            };
+                            img.src = URL.createObjectURL(blob);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error pasting image:', error);
+            }
+        });
+
+        function detectBlackLines() {
+            const imageData = imageCtx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+            const { data, width, height } = imageData;
+            const blackLines = [];
+            const tolerance = 10; // Tolerance for detecting near-black pixels
+
+            // for (let x = 0; x < width; x++) {
+            let x = 860;        // TODO Must fix this to scan whole image not just one column
+            let isBlackLine = false;
+
+                for (let y = 0; y < height; y++) {
+                    const index = (y * width + x) * 4; // Calculate pixel index
+                    const r = data[index];     // Red channel
+                    const g = data[index + 1]; // Green channel
+                    const b = data[index + 2]; // Blue channel
+                    // console.log("(" + x + "," + y + ")" + " - " + r + "," + g + "," + b);
+
+                    // Check if the pixel is black (or near-black within tolerance)
+                    if (r <= tolerance && g <= tolerance && b <= tolerance) {
+                        blackLines.push(y); // Add Y-coordinate of the black line
+                        drawRedDot(x,y,imageCanvas)
+                        // break;
+                    }
+                }
+                console.log('Detected black lines at Y positions:', blackLines);
+
+            }
+
+        // }
+
+        // Draw red dot
+        function drawRedDot(x, y, canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 1, 0, Math.PI * 2); // Draw a circle with radius 1
+            ctx.fillStyle = 'red'; // Set the fill color to red
+            ctx.fill();
+        }
+    </script>
+</body>
+</html>

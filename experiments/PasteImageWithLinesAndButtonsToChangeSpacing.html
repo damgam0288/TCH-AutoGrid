@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image with Lines</title>
+    <style>
+        #canvas-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <button id="pasteButton">Paste Image</button>
+    <button id="spacingButton" style="display: none;">Increase/Decrease Line Spacing</button>
+    <button id="lineCountButton" style="display: none;">Increase Line Count</button>
+    
+    <div id="canvas-container">
+        <canvas id="imageCanvas" width="600" height="400"></canvas>
+        <canvas id="linesCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <script>
+        const pasteButton = document.getElementById('pasteButton');
+        const spacingButton = document.getElementById('spacingButton');
+        const lineCountButton = document.getElementById('lineCountButton');
+        const imageCanvas = document.getElementById('imageCanvas');
+        const linesCanvas = document.getElementById('linesCanvas');
+        const imageCtx = imageCanvas.getContext('2d');
+        const linesCtx = linesCanvas.getContext('2d');
+
+        let lineSpacing = 20; // Initial spacing
+        let lineCount = 10; // Initial line count
+
+        // Paste image functionality
+        pasteButton.addEventListener('click', async () => {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            const img = new Image();
+                            img.onload = () => {
+                                imageCtx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+                                drawLines();
+                                pasteButton.remove();
+                                spacingButton.style.display = 'inline-block';
+                                lineCountButton.style.display = 'inline-block';
+                            };
+                            img.src = URL.createObjectURL(blob);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error pasting image:', error);
+            }
+        });
+
+        // Draw lines function
+        function drawLines() {
+            linesCtx.clearRect(0, 0, linesCanvas.width, linesCanvas.height);
+            for (let i = 0; i < lineCount; i++) {
+                const y = (i + 1) * lineSpacing;
+                linesCtx.beginPath();
+                linesCtx.moveTo(0, y);
+                linesCtx.lineTo(linesCanvas.width, y);
+                linesCtx.strokeStyle = 'red';
+                linesCtx.stroke();
+            }
+        }
+
+        // Increase/Decrease spacing
+        spacingButton.addEventListener('click', () => {
+            lineSpacing = prompt('Enter new line spacing:', lineSpacing) || lineSpacing;
+            drawLines();
+        });
+
+        // Increase line count
+        lineCountButton.addEventListener('click', () => {
+            lineCount = prompt('Enter new line count:', lineCount) || lineCount;
+            drawLines();
+        });
+    </script>
+</body>
+</html>

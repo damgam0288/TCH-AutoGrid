@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image with Lines</title>
+    <style>
+        #canvas-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <button id="pasteButton">Paste Image</button>
+    <button id="spacingButton" style="display: none;">Increase/Decrease Line Spacing</button>
+    <button id="lineCountButton" style="display: none;">Increase Line Count</button>
+    
+    <div id="canvas-container">
+        <canvas id="imageCanvas" width="600" height="400"></canvas>
+        <canvas id="linesCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <script>
+        const pasteButton = document.getElementById('pasteButton');
+        const spacingButton = document.getElementById('spacingButton');
+        const lineCountButton = document.getElementById('lineCountButton');
+        const imageCanvas = document.getElementById('imageCanvas');
+        const linesCanvas = document.getElementById('linesCanvas');
+        const imageCtx = imageCanvas.getContext('2d');
+        const linesCtx = linesCanvas.getContext('2d');
+
+        let lineSpacing = 20; // Initial spacing
+        let lineCount = 10; // Initial line count
+
+        // Paste image functionality
+        pasteButton.addEventListener('click', async () => {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            const img = new Image();
+                            img.onload = () => {
+                                // Adjust canvas sizes to match the image resolution
+                                imageCanvas.width = img.width;
+                                imageCanvas.height = img.height;
+                                linesCanvas.width = img.width;
+                                linesCanvas.height = img.height;
+
+                                // Draw the image on the canvas
+                                imageCtx.drawImage(img, 0, 0);
+
+                                // Draw initial lines
+                                drawLines();
+
+                                // Remove the paste button and show the other buttons
+                                pasteButton.remove();
+                                spacingButton.style.display = 'inline-block';
+                                lineCountButton.style.display = 'inline-block';
+                            };
+                            img.src = URL.createObjectURL(blob);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error pasting image:', error);
+            }
+        });
+
+        // Draw lines function
+        function drawLines() {
+
+            let lineLocations = findLineLocations();
+            console.log(lineLocations);
+
+            linesCtx.clearRect(0, 0, linesCanvas.width, linesCanvas.height);
+            linesCtx.strokeStyle = 'black';
+            linesCtx.lineWidth = 1; // Ensure the line width is set to 1 for crispness
+
+            lineLocations.forEach(line => {
+                console.log(line);
+                drawOneLine(0,linesCanvas.width,line,linesCtx);
+            });
+
+            // for (let i = 0; i < lineCount; i++) {
+            //     // Calculate the Y-coordinate, ensuring it is an integer
+            //     const y = Math.round((i + 1) * lineSpacing);
+
+            //     // Draw the line
+            //     linesCtx.beginPath();
+            //     linesCtx.moveTo(0, y + 0.5); // Add 0.5 to align the line to the pixel grid
+            //     linesCtx.lineTo(linesCanvas.width, y + 0.5);
+            //     linesCtx.stroke();
+            // }
+        }
+
+        // Detect black line locations only
+        function findLineLocations() {
+            const imageData = imageCtx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+            const { data, width, height } = imageData;
+            const blackLines = [];
+            const tolerance = 10;
+
+            let x = 860;        // TODO Must fix this to scan whole image not just one column
+
+            for (let y = 0; y < height; y++) {
+                const index = (y * width + x) * 4; // Calculate pixel index
+                const r = data[index];     // Red channel
+                const g = data[index + 1]; // Green channel
+                const b = data[index + 2]; // Blue channel
+
+                // Check if the pixel is black (or near-black within tolerance)
+                if (r <= tolerance && g <= tolerance && b <= tolerance) {
+                    blackLines.push(y); // Add Y-coordinate of the black line
+                }
+            }
+
+            return blackLines;
+        }
+
+        // Draw red dot
+        function drawRedDot(x, y, canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 1, 0, Math.PI * 2); // Draw a circle with radius 1
+            ctx.fillStyle = 'red'; // Set the fill color to red
+            ctx.fill();
+        }
+
+        // Draw the line
+        function drawOneLine(startX, endX, y, linesCtx) {
+            linesCtx.beginPath();
+            linesCtx.moveTo(startX, y + 0.5); // Add 0.5 to align the line to the pixel grid
+            linesCtx.lineTo(endX, y + 0.5);
+            linesCtx.stroke();
+        }
+        
+        // Increase/Decrease spacing
+        spacingButton.addEventListener('click', () => {
+            lineSpacing = prompt('Enter new line spacing:', lineSpacing) || lineSpacing;
+            drawLines();
+        });
+
+        // Increase line count
+        lineCountButton.addEventListener('click', () => {
+            lineCount = prompt('Enter new line count:', lineCount) || lineCount;
+            drawLines();
+        });
+    </script>
+</body>
+</html>
