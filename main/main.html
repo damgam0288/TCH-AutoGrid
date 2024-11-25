@@ -20,7 +20,7 @@
         .lines-canvas {
             position: absolute;
             top: 0;
-            left: 50%;
+            left: 70%;
             border: none;
         }
     </style>
@@ -76,7 +76,8 @@
                     // Render the PDF page onto the PDF canvas
                     await page.render({
                         canvasContext: pdfContext,
-                        viewport
+                        viewport: viewport,
+                        transform: [1.2, 0, 0, 1.2, 0, -60]
                     }).promise;
 
                     // Draw lines on the lines canvas
@@ -90,7 +91,7 @@
 
         // Draw lines function
         function drawLines(dataCtx, linesCtx, width, height) {
-            const lineLocations = findLineLocations(dataCtx, width, height, 20);
+            const lineLocations = findLineLocations(dataCtx, width, height, 25, 230, 20);
 
             linesCtx.clearRect(0, 0, width, height);
             linesCtx.strokeStyle = 'rgb(230,230,230)';
@@ -102,13 +103,11 @@
         }
 
        // Detect the y-coordinate locations of the grid lines in the document
-       function findLineLocations(imageCtx, w, h, x) {
+       function findLineLocations(imageCtx, w, h, x, targetColour, tolerance) {
             const imageData = imageCtx.getImageData(0, 0, w, h);
             const { data, width, height } = imageData;
             const linesYCoordinates = [];
-            const targetColour = 230;
-            const tolerance = 20;
-
+   
             for (let y = 0; y < height; y++) {
                 index = (y * width + x) * 4; // Calculate pixel index
                 r = data[index];     // Red channel
@@ -128,7 +127,7 @@
             return linesYCoordinates;
         }
 
-        // Draw the line
+        // Draw one line
         function drawOneLine(startX, endX, startY, endY, linesCtx) {
             linesCtx.beginPath();
             linesCtx.moveTo(startX, startY + 0.5);
