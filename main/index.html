@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF with Auto Lines</title>
+    <title>PDF with Auto Lines 25/11/24</title>
     <style>
         #canvas-container {
             display: flex;
@@ -18,7 +18,7 @@
 </head>
 <body>
     <input type="file" id="fileInput" accept="application/pdf">
-   
+
     <div id="canvas-container">
         <canvas id="imageCanvas" width="600" height="400"></canvas>
         <canvas id="linesCanvas" width="600" height="400"></canvas>
@@ -32,29 +32,35 @@
         const imageCtx = imageCanvas.getContext('2d');
         const linesCtx = linesCanvas.getContext('2d');
 
+        const incCanvasButton = document.getElementById('increaseCanvas');
+        const decCanvasButton = document.getElementById('decreaseCanvas');
+
         fileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
                 const pdfData = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-                const page = await pdf.getPage(1); // Load the first page
-
+                const page = await pdf.getPage(1); // TODO handle multiple pages
                 const viewport = page.getViewport({ scale: 1 });
-                imageCanvas.width = viewport.width;
-                imageCanvas.height = viewport.height;
-                linesCanvas.width = viewport.width;
-                linesCanvas.height = viewport.height;
 
+                // Adjust the canvas size to match the cropped area
+                imageCanvas.width = viewport.width * 1;
+                imageCanvas.height = viewport.height * 0.9;
+                
+                imageCtx.transform(1, 0, 0, 1, 85, 0);
+
+                // Prepare the render context
                 const renderContext = {
                     canvasContext: imageCtx,
-                    viewport: viewport
+                    viewport: viewport,
+                    transform: [1.1, 0, 0, 1.1, 0, -65] // Crop and shift the viewport
                 };
 
+                // Render the cropped portion of the PDF
                 await page.render(renderContext).promise;
 
-                // Draw lines after rendering
+                // Optionally draw lines or additional elements
                 drawLines();
-                // logLines();
                 fileInput.style.display = 'none';
             }
         });
@@ -62,7 +68,6 @@
         // Draw lines function
         function drawLines() {
             const lineLocations = findLineLocations();
-            console.log(lineLocations);
 
             linesCtx.clearRect(0, 0, linesCanvas.width, linesCanvas.height);
             linesCtx.strokeStyle = 'black';
@@ -74,14 +79,19 @@
         }
 
        // Detect the y-coordinate locations of the grid lines in the document
+       // TODO make this to accept an "x" coordinate to search in - use it as a function that is part 
+       //  of a larger module that will find the appropriate x-coordinate
        function findLineLocations() {
+            // TODO Auto calculate grid's left and right borders
+            // TODO Auto calculate grid's top and bottom borders
+ 
             const imageData = imageCtx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
             const { data, width, height } = imageData;
             const linesYCoordinates = [];
             const targetColour = 230;
             const tolerance = 20;
 
-            let x = 20;        // TODO Must fix this to scan whole image not just one column
+            let x = 2;        // TODO Must fix this to scan whole image not just one column
             drawOneLine(x,x,0,height,imageCtx);
 
             for (let y = 0; y < height; y++) {
@@ -94,7 +104,6 @@
                 if (r >= targetColour - tolerance && r <= targetColour + tolerance) {
                     if (g >= targetColour - tolerance && g <= targetColour + tolerance) {
                         if (b >= targetColour - tolerance && b <= targetColour + tolerance) {
-                            console.log("HIT COLOUR!");
                             linesYCoordinates.push(y); // Add Y-coordinate of the black line
                         }
                     }
