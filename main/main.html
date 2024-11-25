@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Render Multiple PDF Pages</title>
+    <title>Render PDF with Lines</title>
     <style>
         body {
             margin: 0;
             padding: 0;
         }
         .page-container {
+            position: relative;
             margin-bottom: 20px; /* Add space between pages */
         }
         canvas {
             display: block;
             margin: 0 auto;
-            border: 1px solid black; /* Optional: For visual separation */
+        }
+        .lines-canvas {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            border: none;
         }
     </style>
 </head>
@@ -45,30 +51,90 @@
                     // Create a container for the page
                     const pageContainer = document.createElement('div');
                     pageContainer.classList.add('page-container');
+                    pageContainer.style.width = `${viewport.width}px`;
+                    pageContainer.style.height = `${viewport.height}px`;
 
-                    // Create a canvas for the page
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
+                    // Create a canvas for the PDF content
+                    const pdfCanvas = document.createElement('canvas');
+                    pdfCanvas.width = viewport.width;
+                    pdfCanvas.height = viewport.height;
 
-                    // Set canvas dimensions to match the page viewport
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
+                    const pdfContext = pdfCanvas.getContext('2d');
 
-                    // Append canvas to the container
-                    pageContainer.appendChild(canvas);
+                    // Create a canvas for the lines
+                    const linesCanvas = document.createElement('canvas');
+                    linesCanvas.width = viewport.width;
+                    linesCanvas.height = viewport.height;
+                    linesCanvas.classList.add('lines-canvas');
+                    const linesContext = linesCanvas.getContext('2d');
+
+                    // Put the canvases into the container
+                    pageContainer.appendChild(pdfCanvas);
+                    pageContainer.appendChild(linesCanvas);
                     pdfContainer.appendChild(pageContainer);
 
-                    // Render the page onto the canvas
+                    // Render the PDF page onto the PDF canvas
                     await page.render({
-                        canvasContext: context,
+                        canvasContext: pdfContext,
                         viewport
                     }).promise;
+
+                    // Draw lines on the lines canvas
+                    drawLines(pdfContext, linesContext, viewport.width, viewport.height);
                 }
 
                 // Hide the file input to prepare for printing
                 fileInput.style.display = 'none';
             }
         });
+
+        // Draw lines function
+        function drawLines(dataCtx, linesCtx, width, height) {
+            const lineLocations = findLineLocations(dataCtx, width, height, 20);
+
+            linesCtx.clearRect(0, 0, width, height);
+            linesCtx.strokeStyle = 'rgb(230,230,230)';
+            linesCtx.lineWidth = 1;
+
+            lineLocations.forEach(y => {
+                drawOneLine(0, width, y, y, linesCtx);
+            });
+        }
+
+       // Detect the y-coordinate locations of the grid lines in the document
+       function findLineLocations(imageCtx, w, h, x) {
+            const imageData = imageCtx.getImageData(0, 0, w, h);
+            const { data, width, height } = imageData;
+            const linesYCoordinates = [];
+            const targetColour = 230;
+            const tolerance = 20;
+
+            for (let y = 0; y < height; y++) {
+                index = (y * width + x) * 4; // Calculate pixel index
+                r = data[index];     // Red channel
+                g = data[index + 1]; // Green channel
+                b = data[index + 2]; // Blue channel
+
+                // Check if the pixel is near target colour
+                if (r >= targetColour - tolerance && r <= targetColour + tolerance) {
+                    if (g >= targetColour - tolerance && g <= targetColour + tolerance) {
+                        if (b >= targetColour - tolerance && b <= targetColour + tolerance) {
+                            linesYCoordinates.push(y); // Add Y-coordinate of the black line
+                        }
+                    }
+                }
+            }
+
+            return linesYCoordinates;
+        }
+
+        // Draw the line
+        function drawOneLine(startX, endX, startY, endY, linesCtx) {
+            linesCtx.beginPath();
+            linesCtx.moveTo(startX, startY + 0.5);
+            linesCtx.lineTo(endX, endY + 0.5);
+            linesCtx.stroke();
+        }
     </script>
 </body>
 </html>
