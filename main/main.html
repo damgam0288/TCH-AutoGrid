@@ -31,9 +31,13 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.min.js"></script>
     <script>
+        const pdfScaleX = 1.2;
+        const pdfScaleY = 1.2;
+        const pdfOffsetY = -60;
         const fileInput = document.getElementById('fileInput');
         const pdfContainer = document.getElementById('pdfContainer');
 
+        // Load the pdf document
         fileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
@@ -77,7 +81,7 @@
                     await page.render({
                         canvasContext: pdfContext,
                         viewport: viewport,
-                        transform: [1.2, 0, 0, 1.2, 0, -60]
+                        transform: [pdfScaleX, 0, 0, pdfScaleY, 0, pdfOffsetY]
                     }).promise;
 
                     // Draw lines on the lines canvas
@@ -91,12 +95,11 @@
 
         // Draw lines function
         function drawLines(dataCtx, linesCtx, width, height) {
-            const lineLocations = findLineLocations(dataCtx, width, height, 25, 230, 20);
-
             linesCtx.clearRect(0, 0, width, height);
             linesCtx.strokeStyle = 'rgb(230,230,230)';
             linesCtx.lineWidth = 1;
 
+            lineLocations = findLineLocations(dataCtx, width, height, 25, 230, 20);
             lineLocations.forEach(y => {
                 drawOneLine(0, width, y, y, linesCtx);
             });
