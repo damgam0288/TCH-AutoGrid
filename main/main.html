@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Render Multiple PDF Pages</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .page-container {
+            margin-bottom: 20px; /* Add space between pages */
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid black; /* Optional: For visual separation */
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="application/pdf">
+    <div id="pdfContainer"></div> <!-- Container for all pages -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.min.js"></script>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const pdfContainer = document.getElementById('pdfContainer');
+
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const pdfData = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+                // Render each page
+                for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+                    const page = await pdf.getPage(pageNumber);
+
+                    // Get viewport for the page
+                    const scale = 1; // Adjust scale if needed
+                    const viewport = page.getViewport({ scale });
+
+                    // Create a container for the page
+                    const pageContainer = document.createElement('div');
+                    pageContainer.classList.add('page-container');
+
+                    // Create a canvas for the page
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+
+                    // Set canvas dimensions to match the page viewport
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    // Append canvas to the container
+                    pageContainer.appendChild(canvas);
+                    pdfContainer.appendChild(pageContainer);
+
+                    // Render the page onto the canvas
+                    await page.render({
+                        canvasContext: context,
+                        viewport
+                    }).promise;
+                }
+
+                // Hide the file input to prepare for printing
+                fileInput.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
